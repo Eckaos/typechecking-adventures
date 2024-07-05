@@ -62,7 +62,7 @@ library
     exposed-modules:  Lib
 
     -- Modules included in this library but not exported.
-    other-modules: Common,Parser,RawSyntax,Syntax,Values,Evaluation,Typecheck
+    other-modules: Common,Primitive,Parser,RawSyntax,Syntax,Values,Evaluation,Typecheck
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

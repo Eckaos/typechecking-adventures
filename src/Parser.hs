@@ -1,12 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Parser where
+module Lexer where
 
-import Common
 import Control.Monad (guard)
 import Control.Monad.Combinators.Expr (Operator (InfixL), makeExprParser)
 import Data.Char (isAlpha, isAlphaNum)
 import Data.Void (Void)
+import Primitive
 import RawSyntax
 import System.Exit (exitSuccess)
 import Text.Megaparsec (MonadParsec (eof, takeWhile1P, try), ParseErrorBundle, Parsec, SourcePos, choice, empty, errorBundlePretty, getSourcePos, many, optional, parse, some, (<|>))
@@ -32,11 +32,11 @@ parens p = char '(' *> p <* char ')'
 pArrow = symbol "->"
 
 keyword :: String -> Bool
-keyword x = x == "let" || x == "in" || x == "\\" || x == "Type"
+keyword x = x == "let" || x == "in" || x == "\\" || x == "Type" || x == "Int"
 
-pIdent :: Parser Name
+pIdent :: Parser String
 pIdent = try $ do
-  x <- takeWhile1P Nothing isAlphaNum
+  x <- takeWhile1P Nothing isAlpha
   guard (not (keyword x))
   x <$ ws
 
@@ -45,14 +45,20 @@ pKeyword kw = do
   C.string kw
   (takeWhile1P Nothing isAlphaNum *> empty) <|> ws
 
+pIntType = do
+  symbol "Int"
+  pure $ RLit $ PrimTy IntType
+
 pAtom :: Parser RTm
 pAtom =
-  withPos ((RVar <$> pIdent) <|> (RType <$ symbol "Type"))
+  ((RVar <$> pIdent) <|> (RType <$ symbol "Type") <|> pIntType)
     <|> parens pRaw
 
 pBinder = pIdent <|> symbol "_"
 
 pSpine = foldl1 RApp <$> some pAtom
+
+pNumber = RLit . I <$> lexeme L.decimal
 
 pLam = do
   char '\\'
@@ -84,7 +90,17 @@ pLet = do
   u <- pRaw
   pure $ RLet x a t u
 
-pRaw = withPos (pLam <|> pLet <|> try pPi <|> funOrSpine)
+binary name f = InfixL (f <$ symbol name)
+
+pBinOp =
+  makeExprParser
+    (pSpine <|> pAtom <|> pNumber <|> pRaw)
+    [ [binary "*" RMulOp],
+      [binary "+" RAddOp],
+      [binary "->" (RPi "_")]
+    ]
+
+pRaw = (pLam <|> pLet <|> try pPi <|> pBinOp)
 
 pSrc = ws *> pRaw <* eof
 

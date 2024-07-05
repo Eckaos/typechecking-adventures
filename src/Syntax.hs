@@ -1,10 +1,12 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Syntax where
 
 import Common
+import Primitive (Constant, PrimOp)
 
 newtype Ix = Ix Int deriving (Show, Eq, Num) via Int
 
@@ -18,7 +20,10 @@ data Tm
   | Lam Name Tm
   | Let Name Tm Tm Tm
   | App Tm Tm
+  | Pair Tm Tm
   | Pi Name Tm Tm
+  | Lit Constant
+  | Op PrimOp
 
 type Ty = Tm
 
@@ -37,7 +42,7 @@ appp :: Int
 appp = 2 -- application
 
 pip :: Int
-pip = 1 -- pi
+pip = 1 -- pi,sig
 
 letp :: Int
 letp = 0 -- let, lambda
@@ -51,6 +56,14 @@ prettyTm = go
   where
     piBind ns x a =
       showParen True ((x ++) . (" : " ++) . go letp ns a)
+    {-
+        goBranch ns ((n, tm) : branches) =
+          ('(' :) . piBind ns n tm . goBranch2 (n : ns) branches
+          where
+            goBranch2 ns ((n, tm) : branches) =
+              ('|' :) . piBind ns n tm . goBranch2 (n : ns) branches
+            goBranch2 ns [] = (')' :)
+    -}
     go :: Int -> [Name] -> Tm -> ShowS
     go p ns = \case
       Var (Ix x) -> ((ns !! x) ++)
@@ -82,6 +95,9 @@ prettyTm = go
             . ("\nin " ++)
             . go letp (x : ns) u
             . ("\n" ++)
+      Pair f s -> ('(' :) . go atomp ns f . (',' :) . go atomp ns s . (')' :)
+      Lit v -> shows v
+      Op v -> shows v
 
 -- DCon branch -> ("data : " ++) . goBranch ns branch
 

@@ -6,6 +6,7 @@ module Typecheck where
 import Common
 import Control.Monad
 import Evaluation
+import Primitive
 import RawSyntax
 import Syntax
 import Text.Megaparsec
@@ -47,6 +48,8 @@ check cxt t a =
       let vt = eval (env cxt) t
       u <- check (define x vt va cxt) u a'
       pure (Let x a t u)
+    (RLit (I i), VLit (PrimTy IntType)) -> pure $ Lit $ I i
+    (RLit (PrimTy IntType), VType) -> pure $ Lit $ PrimTy IntType
     _ -> do
       (t', tty) <- infer cxt t
       unless (conv (lvl cxt) tty a) $
@@ -69,6 +72,18 @@ infer cxt = \case
           | otherwise = go (i + 1) tys
     go 0 (types cxt)
   RType -> pure (Type, VType)
+  RLit (PrimTy a) -> pure (Lit $ PrimTy a, VType)
+  RLit (I i) -> pure (Lit $ I i, VLit $ PrimTy IntType)
+  ROp Add -> pure (Op Add, VPi "_" (VLit $ PrimTy IntType) (Closure (env cxt) (Pi "_" (Lit $ PrimTy IntType) (Lit $ PrimTy IntType))))
+  ROp Mul -> pure (Op Mul, VPi "_" (VLit $ PrimTy IntType) (Closure (env cxt) (Pi "_" (Lit $ PrimTy IntType) (Lit $ PrimTy IntType))))
+  RAddOp e1 e2 -> do
+    e1' <- check cxt e1 (VLit $ PrimTy IntType)
+    e2' <- check cxt e2 (VLit $ PrimTy IntType)
+    pure (nf (env cxt) (AddOp e1' e2'), VLit $ PrimTy IntType)
+  RMulOp e1 e2 -> do
+    e1' <- check cxt e1 (VLit $ PrimTy IntType)
+    e2' <- check cxt e2 (VLit $ PrimTy IntType)
+    pure (nf (env cxt) (MulOp e1' e2'), VLit $ PrimTy IntType)
   RApp t u -> do
     (t, tty) <- infer cxt t
     case tty of
