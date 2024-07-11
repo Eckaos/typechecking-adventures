@@ -1,9 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Lexer where
+module Parser where
 
 import Control.Monad (guard)
-import Control.Monad.Combinators.Expr (Operator (InfixL), makeExprParser)
+import Control.Monad.Combinators.Expr (Operator (InfixL, Prefix), makeExprParser)
 import Data.Char (isAlpha, isAlphaNum)
 import Data.Void (Void)
 import Primitive
@@ -32,7 +32,7 @@ parens p = char '(' *> p <* char ')'
 pArrow = symbol "->"
 
 keyword :: String -> Bool
-keyword x = x == "let" || x == "in" || x == "\\" || x == "Type" || x == "Int"
+keyword x = x == "let" || x == "in" || x == "\\" || x == "Type" || x == "Int" || x == "Double"
 
 pIdent :: Parser String
 pIdent = try $ do
@@ -49,16 +49,22 @@ pIntType = do
   symbol "Int"
   pure $ RLit $ PrimTy IntType
 
+pDoubleType = do
+  symbol "Double"
+  pure $ RLit $ PrimTy DoubleType
+
 pAtom :: Parser RTm
 pAtom =
-  ((RVar <$> pIdent) <|> (RType <$ symbol "Type") <|> pIntType)
+  ((RVar <$> pIdent) <|> (RType <$ symbol "Type") <|> pIntType <|> pDoubleType)
     <|> parens pRaw
 
 pBinder = pIdent <|> symbol "_"
 
 pSpine = foldl1 RApp <$> some pAtom
 
-pNumber = RLit . I <$> lexeme L.decimal
+pInt = RLit . I <$> lexeme L.decimal
+
+pDouble = RLit . D <$> lexeme L.float
 
 pLam = do
   char '\\'
@@ -92,11 +98,14 @@ pLet = do
 
 binary name f = InfixL (f <$ symbol name)
 
+unary name f = Prefix (f <$ symbol name)
+
 pBinOp =
   makeExprParser
-    (pSpine <|> pAtom <|> pNumber <|> pRaw)
-    [ [binary "*" RMulOp],
-      [binary "+" RAddOp],
+    (pSpine <|> pAtom <|> try pDouble <|> pInt <|> pRaw)
+    [ [unary "-" (RUnOpPat Sub)],
+      [binary "*" (RBinOpPat Mul), binary "/" (RBinOpPat Div)],
+      [binary "+" (RBinOpPat Add), binary "-" (RBinOpPat Sub)],
       [binary "->" (RPi "_")]
     ]
 

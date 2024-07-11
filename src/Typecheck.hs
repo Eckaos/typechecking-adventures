@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module Typecheck where
 
@@ -49,6 +48,7 @@ check cxt t a =
       u <- check (define x vt va cxt) u a'
       pure (Let x a t u)
     (RLit (I i), VLit (PrimTy IntType)) -> pure $ Lit $ I i
+    (RLit (D d), VLit (PrimTy DoubleType)) -> pure $ Lit $ D d
     (RLit (PrimTy IntType), VType) -> pure $ Lit $ PrimTy IntType
     _ -> do
       (t', tty) <- infer cxt t
@@ -74,16 +74,17 @@ infer cxt = \case
   RType -> pure (Type, VType)
   RLit (PrimTy a) -> pure (Lit $ PrimTy a, VType)
   RLit (I i) -> pure (Lit $ I i, VLit $ PrimTy IntType)
-  ROp Add -> pure (Op Add, VPi "_" (VLit $ PrimTy IntType) (Closure (env cxt) (Pi "_" (Lit $ PrimTy IntType) (Lit $ PrimTy IntType))))
-  ROp Mul -> pure (Op Mul, VPi "_" (VLit $ PrimTy IntType) (Closure (env cxt) (Pi "_" (Lit $ PrimTy IntType) (Lit $ PrimTy IntType))))
-  RAddOp e1 e2 -> do
-    e1' <- check cxt e1 (VLit $ PrimTy IntType)
-    e2' <- check cxt e2 (VLit $ PrimTy IntType)
-    pure (nf (env cxt) (AddOp e1' e2'), VLit $ PrimTy IntType)
-  RMulOp e1 e2 -> do
-    e1' <- check cxt e1 (VLit $ PrimTy IntType)
-    e2' <- check cxt e2 (VLit $ PrimTy IntType)
-    pure (nf (env cxt) (MulOp e1' e2'), VLit $ PrimTy IntType)
+  RLit (D d) -> pure (Lit $ D d, VLit $ PrimTy DoubleType)
+  ROp o -> pure (Op o, VPi "_" (VLit $ PrimTy IntType) (Closure (env cxt) (Pi "_" (Lit $ PrimTy IntType) (Lit $ PrimTy IntType))))
+  RBinOpPat o e1 e2 -> do
+    (e1', ty1) <- infer cxt e1
+    (e2', ty2) <- infer cxt e2
+    let r = nf (env cxt) (BinOpPat o e1' e2')
+    case (ty1, ty2) of
+      (VLit (PrimTy DoubleType), VLit (PrimTy _)) -> pure (r, VLit $ PrimTy DoubleType)
+      (VLit (PrimTy _), VLit (PrimTy DoubleType)) -> pure (r, VLit $ PrimTy DoubleType)
+      (VLit (PrimTy IntType), VLit (PrimTy IntType)) -> pure (r, VLit $ PrimTy IntType)
+      _ -> error "fdklsqm"
   RApp t u -> do
     (t, tty) <- infer cxt t
     case tty of

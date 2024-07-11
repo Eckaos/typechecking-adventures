@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module Evaluation where
 
@@ -21,14 +20,10 @@ eval e = \case
   Type -> VType
   Lam x t -> VLam x (Closure e t)
   Let _ _ t u -> eval (eval e t : e) u
-  AddOp e1 e2 ->
-    case (eval e e1, eval e e2) of
-      (VLit (I x), VLit (I y)) -> VLit $ I (x + y)
-      (v1, v2) -> VApp (VApp (VOp Add) v1) v2
-  MulOp e1 e2 ->
-    case (eval e e1, eval e e2) of
-      (VLit (I x), VLit (I y)) -> VLit $ I (x * y)
-      (v1, v2) -> VApp (VApp (VOp Add) v1) v2
+  BinOpPat o e1 e2 ->
+    evalBinOp o (eval e e1) (eval e e2)
+  UnOpPat o e' ->
+    evalUnOp o (eval e e')
   App t u ->
     case (eval e t, eval e u) of
       (VLam _ t', u') -> t' $$ u'
@@ -37,6 +32,33 @@ eval e = \case
   Pi x a b -> VPi x (eval e a) (Closure e b)
   Lit c -> VLit c
   Op o -> VOp o
+
+evalBinOp :: PrimOp -> Val -> Val -> Val
+evalBinOp o e1 e2 =
+  case (o, e1, e2) of
+    (Add, VLit (I x), VLit (I y)) -> VLit $ I (x + y)
+    (Sub, VLit (I x), VLit (I y)) -> VLit $ I (x - y)
+    (Mul, VLit (I x), VLit (I y)) -> VLit $ I (x * y)
+    (Div, VLit (I x), VLit (I y)) -> VLit $ I (x `div` y)
+    (Add, VLit (D x), VLit (D y)) -> VLit $ D (x + y)
+    (Add, VLit (D x), VLit (I y)) -> VLit $ D (x + fromIntegral y)
+    (Add, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x + y)
+    (Sub, VLit (D x), VLit (D y)) -> VLit $ D (x - y)
+    (Sub, VLit (D x), VLit (I y)) -> VLit $ D (x - fromIntegral y)
+    (Sub, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x - y)
+    (Mul, VLit (D x), VLit (D y)) -> VLit $ D (x * y)
+    (Mul, VLit (D x), VLit (I y)) -> VLit $ D (x * fromIntegral y)
+    (Mul, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x * y)
+    (Div, VLit (D x), VLit (D y)) -> VLit $ D (x / y)
+    (Div, VLit (D x), VLit (I y)) -> VLit $ D (x / fromIntegral y)
+    (Div, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x / y)
+    _ -> VApp (VApp (VOp o) e1) e2
+
+evalUnOp :: PrimOp -> Val -> Val
+evalUnOp o e =
+  case (o, e) of
+    (Sub, VLit (I x)) -> VLit $ I (-x)
+    _ -> VApp (VOp o) e
 
 quote :: Lvl -> Val -> Tm
 quote l = \case
@@ -64,15 +86,3 @@ conv l t u =
     (VApp t u, VApp t' u') -> conv l t t' && conv l u u'
     (VLit a, VLit a') -> a == a'
     _ -> False
-
-pattern AddOp :: Tm -> Tm -> Tm
-pattern AddOp e1 e2 = App (App (Op Add) e1) e2
-
-pattern VAddOp :: Val -> Val -> Val
-pattern VAddOp e1 e2 = VApp (VApp (VOp Add) e1) e2
-
-pattern MulOp :: Tm -> Tm -> Tm
-pattern MulOp e1 e2 = App (App (Op Mul) e1) e2
-
-pattern VMulOp :: Val -> Val -> Val
-pattern VMulOp e1 e2 = VApp (VApp (VOp Mul) e1) e2

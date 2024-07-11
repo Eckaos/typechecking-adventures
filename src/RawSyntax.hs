@@ -1,28 +1,29 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module RawSyntax where
 
-import Common
+import qualified Common as C
 import Primitive
 import Text.Megaparsec.Pos
 
 data RTm
-  = RVar Name
+  = RVar C.Name
   | RType
-  | RLam Name RTm
-  | RLet Name RTm RTm RTm
+  | RLam C.Name RTm
+  | RLet C.Name RTm RTm RTm
   | RApp RTm RTm
-  | RPi Name RTm RTm
+  | RPi C.Name RTm RTm
   | RLit Constant
   | ROp PrimOp
   | RSrcPos SourcePos RTm
 
-pattern RAddOp :: RTm -> RTm -> RTm
-pattern RAddOp e1 e2 = RApp (RApp (ROp Add) e1) e2
+pattern RBinOpPat :: PrimOp -> RTm -> RTm -> RTm
+pattern RBinOpPat o e1 e2 = RApp (RApp (ROp o) e1) e2
 
-pattern RMulOp :: RTm -> RTm -> RTm
-pattern RMulOp e1 e2 = RApp (RApp (ROp Mul) e1) e2
+pattern RUnOpPat :: PrimOp -> RTm -> RTm
+pattern RUnOpPat o e = RApp (ROp o) e
 
 instance Show RTm where
   show (RVar n) = n

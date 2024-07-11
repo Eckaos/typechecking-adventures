@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Values where
 
@@ -8,9 +9,7 @@ import Syntax
 
 type Env = [Val]
 
-data Closure = Closure Env Tm
-
-data DClosure = DClosure Env Branch
+data Closure = Closure Env Tm deriving (Show)
 
 type VTy = Val
 
@@ -23,3 +22,10 @@ data Val
   | VPi Name VTy Closure
   | VLit Constant
   | VOp PrimOp
+  deriving (Show)
+
+pattern VBinOpPat :: PrimOp -> Val -> Val -> Val
+pattern VBinOpPat o e1 e2 = VApp (VApp (VOp o) e1) e2
+
+pattern VUnOpPat :: PrimOp -> Val -> Val
+pattern VUnOpPat o e = VApp (VOp o) e

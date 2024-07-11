@@ -1,12 +1,13 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Syntax where
 
 import Common
-import Primitive (Constant, PrimOp)
+import Primitive
 
 newtype Ix = Ix Int deriving (Show, Eq, Num) via Int
 
@@ -99,6 +100,10 @@ prettyTm = go
       Lit v -> shows v
       Op v -> shows v
 
--- DCon branch -> ("data : " ++) . goBranch ns branch
-
 instance Show Tm where showsPrec p = prettyTm p []
+
+pattern BinOpPat :: PrimOp -> Tm -> Tm -> Tm
+pattern BinOpPat o e1 e2 = App (App (Op o) e1) e2
+
+pattern UnOpPat :: PrimOp -> Tm -> Tm
+pattern UnOpPat o e = App (Op o) e
