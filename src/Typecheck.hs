@@ -79,10 +79,9 @@ infer cxt = \case
   RBinOpPat o e1 e2 -> do
     (e1', ty1) <- infer cxt e1
     (e2', ty2) <- infer cxt e2
-    case (ty1, ty2) of
-      (VLit (PrimTy DoubleType), VLit (PrimTy DoubleType)) -> pure (nf (env cxt) (BinOpPat o e1' e2'), VLit $ PrimTy DoubleType)
-      (VLit (PrimTy IntType), VLit (PrimTy IntType)) -> pure (nf (env cxt) (BinOpPat o e1' e2'), VLit $ PrimTy IntType)
-      _ -> report cxt (printf "Type mismatch\n\nexpected type:\n\n  %s\n\ninferred type:\n\n  %s\n" (showVal cxt ty1) (showVal cxt ty2))
+    if conv (lvl cxt) ty1 ty2
+      then pure (nf (env cxt) (BinOpPat o e1' e2'), ty1)
+      else report cxt (printf "Type mismatch\n\nexpected type:\n\n  %s\n\ninferred type:\n\n  %s\n" (showVal cxt ty1) (showVal cxt ty2))
   RApp t u -> do
     (t, tty) <- infer cxt t
     case tty of
