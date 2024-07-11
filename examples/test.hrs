@@ -1,1 +1,1 @@
-let foo : Double = 2.0 in 3 / foo
+let foo : Double = 2.0 in 3.0 / foo
