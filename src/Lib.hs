@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Lib (main') where
+module Lib (main',testing) where
 
 import Evaluation (nf, quote)
-import Parser (parseStdin)
+import Parser (pSrc, parseStdin)
 import RawSyntax
 import System.Environment (getArgs)
 import Text.Megaparsec
@@ -50,3 +50,13 @@ mainWith getOpt getRaw = do
 
 main' :: IO ()
 main' = mainWith getArgs parseStdin
+
+testing :: String -> IO ()
+testing file = do
+  s <- readFile file
+  case parse pSrc "" s of
+    Right t -> do
+      case infer (emptyCxt $ initialPos file) t of
+        Right (t', ty) -> putStrLn $ show t' ++ "\n" ++ show ty
+        Left (e, _) -> error e
+    Left _ -> error ""

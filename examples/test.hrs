@@ -1,1 +1,1 @@
-let foo : Nat = 4 in 3 - foo
+let foo : Nat = 4 in 3 - 4 
