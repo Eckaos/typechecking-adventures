@@ -32,7 +32,7 @@ parens p = char '(' *> p <* char ')'
 pArrow = symbol "->"
 
 keyword :: String -> Bool
-keyword x = x == "let" || x == "in" || x == "\\" || x == "Type" || x == "Int" || x == "Double"
+keyword x = x == "let" || x == "in" || x == "\\" || x == "Type" || x == "Int" || x == "Double" || x == "Nat"
 
 pIdent :: Parser String
 pIdent = try $ do
@@ -53,9 +53,13 @@ pDoubleType = do
   symbol "Double"
   pure $ RLit $ PrimTy DoubleType
 
+pNatType = do
+  symbol "Nat"
+  pure $ RLit $ PrimTy NatType
+
 pAtom :: Parser RTm
 pAtom =
-  ((RVar <$> pIdent) <|> (RType <$ symbol "Type") <|> pIntType <|> pDoubleType)
+  ((RVar <$> pIdent) <|> (RType <$ symbol "Type") <|> pIntType <|> pDoubleType <|> pNatType)
     <|> parens pRaw
 
 pBinder = pIdent <|> symbol "_"

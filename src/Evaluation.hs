@@ -36,22 +36,21 @@ eval e = \case
 evalBinOp :: PrimOp -> Val -> Val -> Val
 evalBinOp o e1 e2 =
   case (o, e1, e2) of
+    -- Int
     (Add, VLit (I x), VLit (I y)) -> VLit $ I (x + y)
     (Sub, VLit (I x), VLit (I y)) -> VLit $ I (x - y)
     (Mul, VLit (I x), VLit (I y)) -> VLit $ I (x * y)
     (Div, VLit (I x), VLit (I y)) -> VLit $ I (x `div` y)
+    -- Nat
+    (Add, VLit (N x), VLit (N y)) -> VLit $ N (x + y)
+    (Sub, VLit (N x), VLit (N y)) -> if x - y < 0 then VLit $ N 0 else VLit $ N (x - y)
+    (Mul, VLit (N x), VLit (N y)) -> VLit $ N (x * y)
+    (Div, VLit (N x), VLit (N y)) -> VLit $ N (x `div` y)
+    -- Double
     (Add, VLit (D x), VLit (D y)) -> VLit $ D (x + y)
-    (Add, VLit (D x), VLit (I y)) -> VLit $ D (x + fromIntegral y)
-    (Add, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x + y)
     (Sub, VLit (D x), VLit (D y)) -> VLit $ D (x - y)
-    (Sub, VLit (D x), VLit (I y)) -> VLit $ D (x - fromIntegral y)
-    (Sub, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x - y)
     (Mul, VLit (D x), VLit (D y)) -> VLit $ D (x * y)
-    (Mul, VLit (D x), VLit (I y)) -> VLit $ D (x * fromIntegral y)
-    (Mul, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x * y)
     (Div, VLit (D x), VLit (D y)) -> VLit $ D (x / y)
-    (Div, VLit (D x), VLit (I y)) -> VLit $ D (x / fromIntegral y)
-    (Div, VLit (I x), VLit (D y)) -> VLit $ D (fromIntegral x / y)
     _ -> VApp (VApp (VOp o) e1) e2
 
 evalUnOp :: PrimOp -> Val -> Val
