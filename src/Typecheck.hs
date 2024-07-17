@@ -55,7 +55,10 @@ check cxt t a =
         else pure $ Lit $ N i
     (RLit (N n), VLit (PrimTy NatType)) -> pure $ Lit $ N n
     (RLit (D d), VLit (PrimTy DoubleType)) -> pure $ Lit $ D d
+    (RLit Unit, VLit (PrimTy UnitType)) -> pure $ Lit Unit
     (RLit (PrimTy IntType), VType) -> pure $ Lit $ PrimTy IntType
+    (RLit (PrimTy DoubleType), VType) -> pure $ Lit $ PrimTy DoubleType
+    (RLit (PrimTy UnitType), VType) -> pure $ Lit $ PrimTy UnitType
     _ -> do
       (t', tty) <- infer cxt t
       unless (conv (lvl cxt) tty a) $
@@ -82,6 +85,7 @@ infer cxt = \case
   RLit (I i) -> pure (Lit $ I i, VLit $ PrimTy IntType)
   RLit (N n) -> pure (Lit $ N n, VLit $ PrimTy NatType)
   RLit (D d) -> pure (Lit $ D d, VLit $ PrimTy DoubleType)
+  RLit Unit -> pure (Lit Unit, VLit $ PrimTy UnitType)
   RUnOpPat o e -> do
     (e', ty) <- infer cxt e
     pure (nf (env cxt) (UnOpPat o e'), ty)
