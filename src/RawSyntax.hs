@@ -17,6 +17,7 @@ data RTm
   | RPi C.Name RTm RTm
   | RLit Constant
   | ROp PrimOp
+  | RAnn RTm RTm
   | RSrcPos SourcePos RTm
 
 pattern RBinOpPat :: PrimOp -> RTm -> RTm -> RTm
@@ -34,4 +35,5 @@ instance Show RTm where
   show (RPi n t u) = "(" ++ n ++ " : " ++ show t ++ ") -> " ++ show u
   show (RLit c) = show c
   show (ROp o) = show o
+  show (RAnn a b) = "(" ++ show a ++ " : " ++ show b ++ ")"
   show (RSrcPos s t) = "(" ++ show s ++ "," ++ show t ++ ")"

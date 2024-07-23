@@ -74,6 +74,11 @@ check cxt t a =
 infer :: Cxt -> RTm -> TypeError (Tm, VTy)
 infer cxt = \case
   RSrcPos pos t -> infer (cxt {pos = pos}) t
+  RAnn a b -> do
+    b' <- check cxt b VType
+    let bVal = eval (env cxt) b'
+    a' <- check cxt a bVal
+    pure (a', bVal)
   RVar x -> do
     let go _ [] = report cxt ("Variable out of scope " ++ x)
         go i ((x', a) : tys)
